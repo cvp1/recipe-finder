@@ -49,6 +49,44 @@ Each recipe must have: name, ingredients, directions, description, prep_time, co
 total_time, servings, categories, difficulty, cuisine, nutritional_info."""
 
 
+def normalize_recipe(data: dict) -> dict:
+    """Normalize Claude's recipe output — handles arrays vs strings for fields."""
+    for field in ("ingredients", "directions"):
+        val = data.get(field, "")
+        if isinstance(val, list):
+            data[field] = "\n".join(str(item) for item in val)
+
+    cat = data.get("categories")
+    if isinstance(cat, list):
+        data["categories"] = json.dumps(cat)
+    elif isinstance(cat, str) and not cat.startswith("["):
+        data["categories"] = json.dumps([cat])
+
+    # nutritional_info can come back as a dict — convert to readable string
+    nutri = data.get("nutritional_info")
+    if isinstance(nutri, dict):
+        data["nutritional_info"] = ", ".join(f"{k}: {v}" for k, v in nutri.items())
+
+    # servings can come back as an int
+    servings = data.get("servings")
+    if servings is not None and not isinstance(servings, str):
+        data["servings"] = str(servings)
+
+    return data
+
+
+def _extract_json(text: str) -> str:
+    """Strip markdown code fences if Claude wraps JSON in them."""
+    text = text.strip()
+    if text.startswith("```"):
+        # Remove opening fence (```json or ```)
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        # Remove closing fence
+        if text.endswith("```"):
+            text = text[:-3]
+    return text.strip()
+
+
 def generate_recipes(
     ingredients: list[str],
     preferences: dict | None = None,
@@ -83,7 +121,10 @@ The recipes should primarily use the listed ingredients but can include common p
             system=RECIPE_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        return json.loads(message.content[0].text)
+        raw_text = message.content[0].text
+        logger.info("Claude raw response (first 200 chars): %s", raw_text[:200])
+        cleaned = _extract_json(raw_text)
+        return json.loads(cleaned)
     except (json.JSONDecodeError, IndexError, anthropic.APIError) as e:
         logger.error("Claude API error during recipe generation: %s", e)
         raise
@@ -123,7 +164,11 @@ Make the recipes varied — include different meal types (breakfast, lunch, dinn
             system=SUGGESTION_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        return json.loads(message.content[0].text)
-    except (json.JSONDecodeError, IndexError, anthropic.APIError) as e:
-        logger.error("Claude API error during suggestion generation: %s", e)
+        print(f"[SUGGESTIONS] stop_reason={message.stop_reason} content_blocks={len(message.content)}", flush=True)
+        raw_text = message.content[0].text
+        print(f"[SUGGESTIONS] raw response (first 300 chars): {raw_text[:300]}", flush=True)
+        cleaned = _extract_json(raw_text)
+        return json.loads(cleaned)
+    except Exception as e:
+        print(f"[SUGGESTIONS] ERROR: {type(e).__name__}: {e}", flush=True)
         raise

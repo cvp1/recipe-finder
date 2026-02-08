@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Recipe, SavedRecipe
 from app.schemas import GenerateRequest, GenerateResponse, RecipeOut
-from app.services.claude_service import generate_recipes
+from app.services.claude_service import generate_recipes, normalize_recipe
 from app.services.learning_service import get_user_preferences, track_search
 
 router = APIRouter(tags=["ingredients"])
@@ -30,6 +30,7 @@ def generate_recipes_endpoint(request: GenerateRequest, db: Session = Depends(ge
 
     saved_recipes = []
     for recipe_data in raw_recipes:
+        recipe_data = normalize_recipe(recipe_data)
         recipe = Recipe(
             name=recipe_data["name"],
             ingredients=recipe_data.get("ingredients", ""),

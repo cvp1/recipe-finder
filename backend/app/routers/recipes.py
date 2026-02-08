@@ -63,6 +63,33 @@ def list_saved_recipes(
     )
 
 
+@router.get("/recipes/all", response_model=PaginatedRecipes)
+def list_all_recipes(
+    page: int = 1,
+    per_page: int = 20,
+    search: str | None = None,
+    source: str | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Recipe).order_by(Recipe.created_at.desc())
+    if search:
+        query = query.filter(Recipe.name.ilike(f"%{search}%"))
+    if source == "ai":
+        query = query.filter(Recipe.ai_generated.is_(True))
+    elif source == "imported":
+        query = query.filter(Recipe.ai_generated.is_(False))
+
+    total = query.count()
+    recipes = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return PaginatedRecipes(
+        recipes=[_recipe_to_out(r, db) for r in recipes],
+        total=total,
+        page=page,
+        per_page=per_page,
+    )
+
+
 @router.get("/recipes/{recipe_id}", response_model=RecipeOut)
 def get_recipe(recipe_id: str, db: Session = Depends(get_db)):
     recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()

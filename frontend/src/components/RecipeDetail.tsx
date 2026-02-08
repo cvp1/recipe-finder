@@ -1,5 +1,6 @@
-import { Bookmark, BookmarkCheck, Clock, UtensilsCrossed } from "lucide-react";
+import { Bookmark, BookmarkCheck, Clock, Download, UtensilsCrossed } from "lucide-react";
 import { useState } from "react";
+import { exportRecipePaprika } from "../api/client";
 import type { Recipe } from "../types";
 
 interface Props {
@@ -19,18 +20,27 @@ export default function RecipeDetail({ recipe, onSave, onUnsave, onRate }: Props
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-start justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{recipe.name}</h1>
-        <button
-          onClick={() =>
-            recipe.is_saved ? onUnsave?.(recipe.id) : onSave?.(recipe.id)
-          }
-          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary-500"
-        >
-          {recipe.is_saved ? (
-            <BookmarkCheck className="h-6 w-6 text-primary-500" />
-          ) : (
-            <Bookmark className="h-6 w-6" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => exportRecipePaprika(recipe.id)}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            title="Export to Paprika"
+          >
+            <Download className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() =>
+              recipe.is_saved ? onUnsave?.(recipe.id) : onSave?.(recipe.id)
+            }
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary-500"
+          >
+            {recipe.is_saved ? (
+              <BookmarkCheck className="h-6 w-6 text-primary-500" />
+            ) : (
+              <Bookmark className="h-6 w-6" />
+            )}
+          </button>
+        </div>
       </div>
 
       {recipe.description && (

@@ -3,6 +3,7 @@ import type {
   DailySuggestion,
   GenerateRequest,
   GenerateResponse,
+  ImportResult,
   PaginatedRecipes,
   Recipe,
   TopIngredient,
@@ -30,6 +31,18 @@ export async function getSavedRecipes(
 ): Promise<PaginatedRecipes> {
   const res = await api.get<PaginatedRecipes>("/recipes", {
     params: { page, per_page: perPage },
+  });
+  return res.data;
+}
+
+export async function getAllRecipes(
+  page = 1,
+  perPage = 20,
+  search?: string,
+  source?: string
+): Promise<PaginatedRecipes> {
+  const res = await api.get<PaginatedRecipes>("/recipes/all", {
+    params: { page, per_page: perPage, search: search || undefined, source: source || undefined },
   });
   return res.data;
 }
@@ -71,4 +84,21 @@ export async function getTopIngredients(
     params: { limit },
   });
   return res.data;
+}
+
+export async function importPaprika(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post<ImportResult>("/paprika/import", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+export function exportAllPaprika(): void {
+  window.open("/api/paprika/export", "_blank");
+}
+
+export function exportRecipePaprika(id: string): void {
+  window.open(`/api/paprika/export/${id}`, "_blank");
 }

@@ -1,8 +1,9 @@
-import { ChefHat, BookOpen, Lightbulb, Bookmark } from "lucide-react";
+import { BookOpen, Bookmark, ChefHat, Library, Lightbulb } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const links = [
   { to: "/", label: "Find Recipes", icon: ChefHat },
+  { to: "/recipes", label: "All Recipes", icon: Library },
   { to: "/suggestions", label: "Daily Picks", icon: Lightbulb },
   { to: "/saved", label: "Saved", icon: Bookmark },
 ];

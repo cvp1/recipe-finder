@@ -4,7 +4,7 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from app.models import DailySuggestion, Recipe
-from app.services.claude_service import generate_daily_suggestions
+from app.services.claude_service import generate_daily_suggestions, normalize_recipe
 from app.services.learning_service import get_user_preferences
 
 
@@ -18,13 +18,24 @@ def get_or_create_daily_suggestions(db: Session, force_refresh: bool = False) ->
             .first()
         )
         if existing:
-            recipe_ids = json.loads(existing.recipes)
-            recipes = db.query(Recipe).filter(Recipe.id.in_(recipe_ids)).all()
-            return {
-                "theme": existing.theme,
-                "recipes": recipes,
-                "date": str(today),
-            }
+            try:
+                recipe_ids = json.loads(existing.recipes)
+            except (json.JSONDecodeError, TypeError):
+                recipe_ids = []
+
+            if recipe_ids:
+                recipes = db.query(Recipe).filter(Recipe.id.in_(recipe_ids)).all()
+                if recipes:
+                    return {
+                        "theme": existing.theme,
+                        "recipes": recipes,
+                        "date": str(today),
+                    }
+
+            # Cached entry is broken — delete it and regenerate
+            print(f"[SUGGESTIONS] Stale cache entry for {today}, regenerating", flush=True)
+            db.delete(existing)
+            db.commit()
 
     preferences = get_user_preferences(db)
     result = generate_daily_suggestions(preferences)
@@ -32,6 +43,7 @@ def get_or_create_daily_suggestions(db: Session, force_refresh: bool = False) ->
     recipes = []
     recipe_ids = []
     for recipe_data in result.get("recipes", []):
+        recipe_data = normalize_recipe(recipe_data)
         recipe = Recipe(
             name=recipe_data["name"],
             ingredients=recipe_data.get("ingredients", ""),
@@ -53,7 +65,7 @@ def get_or_create_daily_suggestions(db: Session, force_refresh: bool = False) ->
         recipes.append(recipe)
         recipe_ids.append(recipe.id)
 
-    # Remove old entry for today if refreshing
+    # Remove any old entry for today before inserting
     db.query(DailySuggestion).filter(DailySuggestion.date == today).delete()
 
     suggestion = DailySuggestion(

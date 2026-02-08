@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import AllRecipesPage from "./pages/AllRecipesPage";
 import HomePage from "./pages/HomePage";
 import RecipePage from "./pages/RecipePage";
 import SavedRecipesPage from "./pages/SavedRecipesPage";
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/recipe/:id" element={<RecipePage />} />
+          <Route path="/recipes" element={<AllRecipesPage />} />
           <Route path="/suggestions" element={<SuggestionsPage />} />
           <Route path="/saved" element={<SavedRecipesPage />} />
         </Routes>

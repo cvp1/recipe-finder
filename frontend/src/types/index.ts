@@ -49,3 +49,9 @@ export interface PaginatedRecipes {
   page: number;
   per_page: number;
 }
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  message: string;
+}
