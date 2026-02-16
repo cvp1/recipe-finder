@@ -66,3 +66,25 @@ class PaginatedRecipes(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class RecipeTabCreate(BaseModel):
+    name: str
+
+
+class RecipeTabUpdate(BaseModel):
+    name: str | None = None
+    position: int | None = None
+
+
+class RecipeTabOut(BaseModel):
+    id: int
+    name: str
+    position: int
+    recipe_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class AddRecipesToTab(BaseModel):
+    recipe_ids: list[str]

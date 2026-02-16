@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Recipe, SavedRecipe
+from app.models import Recipe, RecipeTabRecipe, SavedRecipe
 from app.schemas import (
     PaginatedRecipes,
     RateRecipeRequest,
@@ -14,6 +14,7 @@ from app.schemas import (
     SaveRecipeRequest,
     TopIngredientOut,
 )
+from app.services.import_service import search_recipe_image
 from app.services.learning_service import get_top_ingredients, get_user_preferences
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
@@ -77,9 +78,14 @@ def list_all_recipes(
     per_page: int = 20,
     search: str | None = None,
     source: str | None = None,
+    tab_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(Recipe).order_by(Recipe.created_at.desc())
+    if tab_id is not None:
+        query = query.join(
+            RecipeTabRecipe, RecipeTabRecipe.recipe_id == Recipe.id
+        ).filter(RecipeTabRecipe.tab_id == tab_id)
     if search:
         query = query.filter(Recipe.name.ilike(f"%{search}%"))
     if source == "ai":
@@ -207,6 +213,24 @@ def delete_recipe_image(recipe_id: str, db: Session = Depends(get_db)):
         db.commit()
 
     return {"status": "removed"}
+
+
+@router.post("/recipes/backfill-images")
+def backfill_images(db: Session = Depends(get_db)):
+    """Find all recipes without images and try to fetch from Pexels."""
+    recipes = (
+        db.query(Recipe)
+        .filter((Recipe.image_url.is_(None)) | (Recipe.image_url == ""))
+        .all()
+    )
+    updated = 0
+    for recipe in recipes:
+        image_path = search_recipe_image(recipe.name, recipe.id)
+        if image_path:
+            recipe.image_url = image_path
+            updated += 1
+    db.commit()
+    return {"total": len(recipes), "updated": updated}
 
 
 @router.get("/stats/top-ingredients", response_model=list[TopIngredientOut])

@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookmarkX } from "lucide-react";
 import { useState } from "react";
 import { getSavedRecipes, unsaveRecipe } from "../api/client";
-import ImportExportBar from "../components/ImportExportBar";
 import LoadingSpinner from "../components/LoadingSpinner";
 import RecipeCard from "../components/RecipeCard";
 
@@ -33,8 +32,6 @@ export default function SavedRecipesPage() {
         <h1 className="text-2xl font-bold text-gray-900">Saved Recipes</h1>
         <p className="mt-1 text-gray-500">{total} recipe{total !== 1 ? "s" : ""} saved</p>
       </div>
-
-      <ImportExportBar />
 
       {recipes.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center">

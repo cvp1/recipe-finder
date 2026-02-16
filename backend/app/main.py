@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import import_recipes, ingredients, paprika, recipes, suggestions
+from app.routers import import_recipes, ingredients, paprika, recipes, suggestions, tabs
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 UPLOADS_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
@@ -41,6 +41,7 @@ app.include_router(recipes.router, prefix="/api")
 app.include_router(suggestions.router, prefix="/api")
 app.include_router(paprika.router, prefix="/api")
 app.include_router(import_recipes.router, prefix="/api")
+app.include_router(tabs.router, prefix="/api")
 
 app.mount("/api/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -81,3 +81,27 @@ class DailySuggestion(Base):
     recipes: Mapped[str] = mapped_column(Text, nullable=False)
     theme: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RecipeTab(Base):
+    __tablename__ = "recipe_tabs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    tab_recipes: Mapped[list["RecipeTabRecipe"]] = relationship(
+        back_populates="tab", cascade="all, delete-orphan"
+    )
+
+
+class RecipeTabRecipe(Base):
+    __tablename__ = "recipe_tab_recipes"
+    __table_args__ = (UniqueConstraint("tab_id", "recipe_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tab_id: Mapped[int] = mapped_column(Integer, ForeignKey("recipe_tabs.id"), nullable=False)
+    recipe_id: Mapped[str] = mapped_column(String(36), ForeignKey("recipes.id"), nullable=False)
+
+    tab: Mapped["RecipeTab"] = relationship(back_populates="tab_recipes")

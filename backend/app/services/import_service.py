@@ -213,11 +213,17 @@ def _save_parsed_recipes(db: Session, recipes: list[dict], source: str, image_ur
         db.add(recipe)
         db.flush()  # get recipe.id for image filename
 
-        # Download image for the first recipe from URL imports
+        # Download image from source HTML (URL imports)
         if image_url and imported == 0:
             local_path = _download_image(image_url, recipe.id)
             if local_path:
                 recipe.image_url = local_path
+
+        # Fall back to Pexels if no image was set
+        if not recipe.image_url:
+            pexels_path = search_recipe_image(name, recipe.id)
+            if pexels_path:
+                recipe.image_url = pexels_path
 
         imported += 1
 

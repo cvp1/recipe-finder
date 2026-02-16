@@ -55,3 +55,10 @@ export interface ImportResult {
   skipped: number;
   message: string;
 }
+
+export interface RecipeTab {
+  id: number;
+  name: string;
+  position: number;
+  recipe_count: number;
+}

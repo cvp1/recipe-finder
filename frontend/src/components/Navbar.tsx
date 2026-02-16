@@ -1,4 +1,4 @@
-import { BookOpen, Bookmark, ChefHat, Library, Lightbulb } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Bookmark, ChefHat, Library, Lightbulb } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const links = [
@@ -6,6 +6,7 @@ const links = [
   { to: "/recipes", label: "Library", icon: Library },
   { to: "/suggestions", label: "Daily", icon: Lightbulb },
   { to: "/saved", label: "Saved", icon: Bookmark },
+  { to: "/import-export", label: "Import", icon: ArrowLeftRight },
 ];
 
 export default function Navbar() {

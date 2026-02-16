@@ -1,6 +1,6 @@
-import { Bookmark, BookmarkCheck, Camera, Clock, Download, Printer, Users, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, Camera, Clock, Download, FileText, Printer, Users, X } from "lucide-react";
 import { useRef, useState } from "react";
-import { exportRecipePaprika } from "../api/client";
+import { exportRecipeMarkdown, exportRecipePaprika } from "../api/client";
 import type { Recipe } from "../types";
 
 interface Props {
@@ -88,6 +88,13 @@ export default function RecipeDetail({ recipe, onSave, onUnsave, onRate, onImage
               title="Export to Paprika"
             >
               <Download className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => exportRecipeMarkdown(recipe.id)}
+              className="rounded-lg p-2 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+              title="Export as Markdown"
+            >
+              <FileText className="h-5 w-5" />
             </button>
             <button
               onClick={() =>

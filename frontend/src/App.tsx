@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import AllRecipesPage from "./pages/AllRecipesPage";
 import HomePage from "./pages/HomePage";
 import RecipePage from "./pages/RecipePage";
+import ImportExportPage from "./pages/ImportExportPage";
 import SavedRecipesPage from "./pages/SavedRecipesPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
 
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/recipes" element={<AllRecipesPage />} />
           <Route path="/suggestions" element={<SuggestionsPage />} />
           <Route path="/saved" element={<SavedRecipesPage />} />
+          <Route path="/import-export" element={<ImportExportPage />} />
         </Routes>
       </main>
     </div>

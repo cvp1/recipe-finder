@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, FileText, Globe, Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import { exportAllPaprika, exportSavedPaprika, importFromFiles, importFromUrl, importPaprika } from "../api/client";
+import { exportAllMarkdown, exportAllPaprika, exportSavedMarkdown, exportSavedPaprika, importFromFiles, importFromUrl, importPaprika } from "../api/client";
 
 export default function ImportExportBar() {
   const paprikaInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +109,7 @@ export default function ImportExportBar() {
           {fileMutation.isPending ? "Importing..." : "Import Files"}
         </button>
 
-        {/* Export */}
+        {/* Export Paprika */}
         <button onClick={exportSavedPaprika} className={btnClass}>
           <Download className="h-4 w-4" />
           Export Saved
@@ -117,6 +117,16 @@ export default function ImportExportBar() {
         <button onClick={exportAllPaprika} className={btnClass}>
           <Download className="h-4 w-4" />
           Export All
+        </button>
+
+        {/* Export Markdown */}
+        <button onClick={exportSavedMarkdown} className={btnClass}>
+          <FileText className="h-4 w-4" />
+          Markdown Saved
+        </button>
+        <button onClick={exportAllMarkdown} className={btnClass}>
+          <FileText className="h-4 w-4" />
+          Markdown All
         </button>
       </div>
 

@@ -187,3 +187,106 @@ def export_paprika(db: Session, recipes: list[Recipe]) -> bytes:
 
     buf.seek(0)
     return buf.read()
+
+
+def _recipe_to_markdown(recipe: Recipe, db: Session, include_image_tag: bool = True) -> str:
+    """Convert a single recipe to a Markdown string."""
+    lines: list[str] = []
+    lines.append(f"# {recipe.name}\n")
+
+    if recipe.description:
+        lines.append(f"_{recipe.description}_\n")
+
+    if include_image_tag and recipe.image_url:
+        safe_name = recipe.name.replace("/", "-").replace("\\", "-")[:80] if recipe.name else recipe.id
+        lines.append(f"![{recipe.name}](img/{safe_name}.jpg)\n")
+
+    # Metadata
+    meta_parts = []
+    if recipe.prep_time:
+        meta_parts.append(f"**Prep:** {recipe.prep_time}")
+    if recipe.cook_time:
+        meta_parts.append(f"**Cook:** {recipe.cook_time}")
+    if recipe.total_time:
+        meta_parts.append(f"**Total:** {recipe.total_time}")
+    if recipe.servings:
+        meta_parts.append(f"**Servings:** {recipe.servings}")
+    if recipe.difficulty:
+        meta_parts.append(f"**Difficulty:** {recipe.difficulty}")
+    if recipe.cuisine:
+        meta_parts.append(f"**Cuisine:** {recipe.cuisine}")
+    if meta_parts:
+        lines.append(" | ".join(meta_parts) + "\n")
+
+    categories = []
+    if recipe.categories:
+        try:
+            categories = json.loads(recipe.categories)
+        except json.JSONDecodeError:
+            categories = [recipe.categories]
+    if categories:
+        lines.append("**Categories:** " + ", ".join(categories) + "\n")
+
+    # Ingredients
+    lines.append("## Ingredients\n")
+    for line in (recipe.ingredients or "").split("\n"):
+        line = line.strip()
+        if line:
+            lines.append(f"- {line}")
+    lines.append("")
+
+    # Directions
+    lines.append("## Directions\n")
+    for i, line in enumerate((recipe.directions or "").split("\n"), 1):
+        line = line.strip()
+        if line:
+            clean = line
+            # Strip existing step numbering
+            import re
+            clean = re.sub(r"^(Step\s+)?\d+[.:]\s*", "", clean, flags=re.IGNORECASE)
+            lines.append(f"{i}. {clean}")
+    lines.append("")
+
+    # Optional sections
+    if recipe.nutritional_info:
+        lines.append("## Nutrition\n")
+        lines.append(recipe.nutritional_info + "\n")
+
+    if recipe.notes:
+        lines.append("## Notes\n")
+        lines.append(recipe.notes + "\n")
+
+    saved = db.query(SavedRecipe).filter(SavedRecipe.recipe_id == recipe.id).first()
+    if saved and saved.rating:
+        lines.append(f"**Rating:** {'★' * saved.rating}{'☆' * (5 - saved.rating)}\n")
+
+    if recipe.source:
+        lines.append(f"**Source:** {recipe.source}\n")
+
+    return "\n".join(lines)
+
+
+def export_markdown(db: Session, recipes: list[Recipe]) -> bytes:
+    """Export recipes as a ZIP containing Markdown files and images."""
+    buf = io.BytesIO()
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for recipe in recipes:
+            safe_name = recipe.name.replace("/", "-").replace("\\", "-")[:80] if recipe.name else recipe.id
+
+            md_content = _recipe_to_markdown(recipe, db)
+            zf.writestr(f"{safe_name}.md", md_content.encode("utf-8"))
+
+            # Include image if available
+            if recipe.image_url:
+                img_path = UPLOADS_DIR / Path(recipe.image_url).name
+                if img_path.is_file():
+                    zf.write(img_path, f"img/{safe_name}.jpg")
+
+    buf.seek(0)
+    return buf.read()
+
+
+def export_single_markdown(recipe: Recipe, db: Session) -> str:
+    """Export a single recipe as a Markdown string (no ZIP)."""
+    return _recipe_to_markdown(recipe, db, include_image_tag=False)

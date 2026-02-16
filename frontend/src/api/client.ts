@@ -6,6 +6,7 @@ import type {
   ImportResult,
   PaginatedRecipes,
   Recipe,
+  RecipeTab,
   TopIngredient,
 } from "../types";
 
@@ -39,10 +40,11 @@ export async function getAllRecipes(
   page = 1,
   perPage = 20,
   search?: string,
-  source?: string
+  source?: string,
+  tabId?: number
 ): Promise<PaginatedRecipes> {
   const res = await api.get<PaginatedRecipes>("/recipes/all", {
-    params: { page, per_page: perPage, search: search || undefined, source: source || undefined },
+    params: { page, per_page: perPage, search: search || undefined, source: source || undefined, tab_id: tabId },
   });
   return res.data;
 }
@@ -107,6 +109,18 @@ export function exportRecipePaprika(id: string): void {
   window.open(`/api/paprika/export/${id}`, "_blank");
 }
 
+export function exportSavedMarkdown(): void {
+  window.open("/api/markdown/export", "_blank");
+}
+
+export function exportAllMarkdown(): void {
+  window.open("/api/markdown/export-all", "_blank");
+}
+
+export function exportRecipeMarkdown(id: string): void {
+  window.open(`/api/markdown/export/${id}`, "_blank");
+}
+
 export async function uploadRecipeImage(id: string, file: File): Promise<Recipe> {
   const formData = new FormData();
   formData.append("file", file);
@@ -131,5 +145,55 @@ export async function importFromFiles(files: File[]): Promise<ImportResult> {
   const res = await api.post<ImportResult>("/import/files", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return res.data;
+}
+
+export async function backfillImages(): Promise<{ total: number; updated: number }> {
+  const res = await api.post<{ total: number; updated: number }>("/recipes/backfill-images");
+  return res.data;
+}
+
+// Tabs API
+export async function getTabs(): Promise<RecipeTab[]> {
+  const res = await api.get<RecipeTab[]>("/tabs");
+  return res.data;
+}
+
+export async function createTab(name: string): Promise<RecipeTab> {
+  const res = await api.post<RecipeTab>("/tabs", { name });
+  return res.data;
+}
+
+export async function updateTab(
+  tabId: number,
+  data: { name?: string; position?: number }
+): Promise<RecipeTab> {
+  const res = await api.put<RecipeTab>(`/tabs/${tabId}`, data);
+  return res.data;
+}
+
+export async function deleteTab(tabId: number): Promise<void> {
+  await api.delete(`/tabs/${tabId}`);
+}
+
+export async function addRecipesToTab(
+  tabId: number,
+  recipeIds: string[]
+): Promise<RecipeTab> {
+  const res = await api.post<RecipeTab>(`/tabs/${tabId}/recipes`, {
+    recipe_ids: recipeIds,
+  });
+  return res.data;
+}
+
+export async function removeRecipeFromTab(
+  tabId: number,
+  recipeId: string
+): Promise<void> {
+  await api.delete(`/tabs/${tabId}/recipes/${recipeId}`);
+}
+
+export async function getRecipeTabIds(recipeId: string): Promise<number[]> {
+  const res = await api.get<number[]>(`/tabs/recipe/${recipeId}`);
   return res.data;
 }
