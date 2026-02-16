@@ -6,9 +6,9 @@ interface Props {
 
 export default function LoadingSpinner({ message = "Loading..." }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-      <p className="mt-3 text-sm text-gray-500">{message}</p>
+    <div className="flex flex-col items-center justify-center py-16">
+      <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+      <p className="mt-3 font-sans text-sm text-stone-400">{message}</p>
     </div>
   );
 }

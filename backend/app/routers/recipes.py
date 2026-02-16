@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,6 +15,10 @@ from app.schemas import (
     TopIngredientOut,
 )
 from app.services.learning_service import get_top_ingredients, get_user_preferences
+
+UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
 
 router = APIRouter(tags=["recipes"])
 
@@ -148,6 +156,56 @@ def unsave_recipe(recipe_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Saved recipe not found")
     db.delete(saved)
     db.commit()
+    return {"status": "removed"}
+
+
+@router.post("/recipes/{recipe_id}/image", response_model=RecipeOut)
+async def upload_recipe_image(
+    recipe_id: str,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+):
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="File must be JPG, PNG, or WebP")
+
+    contents = await file.read()
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="Image must be under 5MB")
+
+    # Delete old image if exists
+    if recipe.image_url:
+        old_path = UPLOADS_DIR / Path(recipe.image_url).name
+        if old_path.is_file():
+            old_path.unlink()
+
+    filename = f"{recipe_id}_{uuid.uuid4().hex[:8]}{ext}"
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    (UPLOADS_DIR / filename).write_bytes(contents)
+
+    recipe.image_url = f"/api/uploads/{filename}"
+    db.commit()
+    db.refresh(recipe)
+    return _recipe_to_out(recipe, db)
+
+
+@router.delete("/recipes/{recipe_id}/image")
+def delete_recipe_image(recipe_id: str, db: Session = Depends(get_db)):
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    if recipe.image_url:
+        old_path = UPLOADS_DIR / Path(recipe.image_url).name
+        if old_path.is_file():
+            old_path.unlink()
+        recipe.image_url = None
+        db.commit()
+
     return {"status": "removed"}
 
 

@@ -95,10 +95,41 @@ export async function importPaprika(file: File): Promise<ImportResult> {
   return res.data;
 }
 
-export function exportAllPaprika(): void {
+export function exportSavedPaprika(): void {
   window.open("/api/paprika/export", "_blank");
+}
+
+export function exportAllPaprika(): void {
+  window.open("/api/paprika/export-all", "_blank");
 }
 
 export function exportRecipePaprika(id: string): void {
   window.open(`/api/paprika/export/${id}`, "_blank");
+}
+
+export async function uploadRecipeImage(id: string, file: File): Promise<Recipe> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post<Recipe>(`/recipes/${id}/image`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+export async function deleteRecipeImage(id: string): Promise<void> {
+  await api.delete(`/recipes/${id}/image`);
+}
+
+export async function importFromUrl(url: string): Promise<ImportResult> {
+  const res = await api.post<ImportResult>("/import/url", { url });
+  return res.data;
+}
+
+export async function importFromFiles(files: File[]): Promise<ImportResult> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  const res = await api.post<ImportResult>("/import/files", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
 }

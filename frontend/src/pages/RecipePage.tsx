@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { getRecipe, rateRecipe, saveRecipe, unsaveRecipe } from "../api/client";
+import { deleteRecipeImage, getRecipe, rateRecipe, saveRecipe, unsaveRecipe, uploadRecipeImage } from "../api/client";
 import LoadingSpinner from "../components/LoadingSpinner";
 import RecipeDetail from "../components/RecipeDetail";
 
@@ -31,12 +31,22 @@ export default function RecipePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recipe", id] }),
   });
 
+  const imageUpload = useMutation({
+    mutationFn: (file: File) => uploadRecipeImage(id!, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recipe", id] }),
+  });
+
+  const imageDelete = useMutation({
+    mutationFn: () => deleteRecipeImage(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recipe", id] }),
+  });
+
   if (isLoading) return <LoadingSpinner message="Loading recipe..." />;
   if (error || !recipe) {
     return (
-      <div className="py-12 text-center text-gray-500">
+      <div className="py-16 text-center font-sans text-stone-500">
         Recipe not found.{" "}
-        <Link to="/" className="text-primary-600 hover:underline">
+        <Link to="/" className="text-amber-600 hover:underline">
           Go back
         </Link>
       </div>
@@ -44,10 +54,10 @@ export default function RecipePage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl">
       <Link
         to="/"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="mb-4 inline-flex items-center gap-1 font-sans text-sm text-stone-400 hover:text-stone-600 print-hide"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
@@ -57,6 +67,8 @@ export default function RecipePage() {
         onSave={(recipeId) => save.mutate(recipeId)}
         onUnsave={(recipeId) => unsave.mutate(recipeId)}
         onRate={(recipeId, rating) => rate.mutate({ recipeId, rating })}
+        onImageUpload={(file) => imageUpload.mutate(file)}
+        onImageDelete={() => imageDelete.mutate()}
       />
     </div>
   );

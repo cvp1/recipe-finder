@@ -28,7 +28,7 @@ async def import_paprika_file(file: UploadFile, db: Session = Depends(get_db)):
 
 
 @router.get("/paprika/export")
-def export_all_paprika(db: Session = Depends(get_db)):
+def export_saved_paprika(db: Session = Depends(get_db)):
     recipes = (
         db.query(Recipe)
         .join(SavedRecipe, SavedRecipe.recipe_id == Recipe.id)
@@ -41,7 +41,21 @@ def export_all_paprika(db: Session = Depends(get_db)):
     return Response(
         content=data,
         media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=RecipeFinder-Export.paprikarecipes"},
+        headers={"Content-Disposition": "attachment; filename=RecipeFinder-Saved.paprikarecipes"},
+    )
+
+
+@router.get("/paprika/export-all")
+def export_all_paprika(db: Session = Depends(get_db)):
+    recipes = db.query(Recipe).all()
+    if not recipes:
+        raise HTTPException(status_code=404, detail="No recipes to export")
+
+    data = export_paprika(db, recipes)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=RecipeFinder-All.paprikarecipes"},
     )
 
 

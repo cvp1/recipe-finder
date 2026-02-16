@@ -3,5 +3,69 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply text-stone-800 antialiased;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: #faf7f2;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23e8e0d4' fill-opacity='0.25' fill-rule='evenodd'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4, h5, h6, button, input, select, nav, .font-sans {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+    font-size: 11pt;
+  }
+
+  nav, .no-print, button, .print-hide {
+    display: none !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .recipe-print {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .recipe-print h1 {
+    font-size: 18pt;
+    margin-bottom: 4pt;
+  }
+
+  .recipe-print h2 {
+    font-size: 13pt;
+    margin-top: 12pt;
+    margin-bottom: 6pt;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 2pt;
+  }
+
+  .recipe-meta {
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    padding: 6pt 0;
+    margin: 8pt 0;
+  }
+
+  .ingredients-directions {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24pt;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
 }

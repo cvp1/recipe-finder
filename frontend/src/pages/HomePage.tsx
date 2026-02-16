@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import {
   generateRecipes,
@@ -7,19 +7,19 @@ import {
   saveRecipe,
   unsaveRecipe,
 } from "../api/client";
-import IngredientInput from "../components/IngredientInput";
 import LoadingSpinner from "../components/LoadingSpinner";
 import RecipeCard from "../components/RecipeCard";
 import type { Recipe } from "../types";
 
 export default function HomePage() {
+  const [input, setInput] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [results, setResults] = useState<Recipe[]>([]);
   const queryClient = useQueryClient();
 
   const { data: topIngredients } = useQuery({
     queryKey: ["topIngredients"],
-    queryFn: () => getTopIngredients(8),
+    queryFn: () => getTopIngredients(12),
   });
 
   const generate = useMutation({
@@ -33,9 +33,7 @@ export default function HomePage() {
   const save = useMutation({
     mutationFn: (id: string) => saveRecipe(id),
     onSuccess: (updated) => {
-      setResults((prev) =>
-        prev.map((r) => (r.id === updated.id ? updated : r))
-      );
+      setResults((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     },
   });
 
@@ -48,55 +46,114 @@ export default function HomePage() {
     },
   });
 
+  function addIngredient(value?: string) {
+    const trimmed = (value ?? input).trim().toLowerCase();
+    if (trimmed && !ingredients.includes(trimmed)) {
+      setIngredients((prev) => [...prev, trimmed]);
+      if (!value) setInput("");
+    }
+  }
+
+  function removeIngredient(index: number) {
+    setIngredients((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (input.trim()) {
+        addIngredient();
+      } else if (ingredients.length > 0) {
+        generate.mutate({ ingredients });
+      }
+    }
+    if (e.key === "Backspace" && !input && ingredients.length > 0) {
+      removeIngredient(ingredients.length - 1);
+    }
+  }
+
   function handleGenerate() {
     if (ingredients.length === 0) return;
     generate.mutate({ ingredients });
   }
 
-  function addQuickIngredient(ingredient: string) {
-    if (!ingredients.includes(ingredient)) {
-      setIngredients([...ingredients, ingredient]);
-    }
-  }
-
   return (
-    <div>
-      <div className="mb-8 text-center">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">
-          What's in your kitchen?
-        </h1>
-        <p className="text-gray-500">
-          Add your ingredients and let AI create delicious recipes for you
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      {/* Hero area */}
+      {results.length === 0 && !generate.isPending && (
+        <div className="mb-10 pt-10 text-center">
+          <p className="mb-2 text-sm italic text-amber-600/80">tell us what you have</p>
+          <h1 className="mb-3 text-4xl font-bold tracking-tight text-amber-950" style={{ fontFamily: 'Georgia, serif' }}>
+            What's in your kitchen?
+          </h1>
+          <p className="font-sans text-base text-stone-500">
+            Add your ingredients and we'll dream up something delicious.
+          </p>
+        </div>
+      )}
 
-      <div className="mx-auto max-w-2xl">
-        <IngredientInput
-          ingredients={ingredients}
-          onChange={setIngredients}
-          disabled={generate.isPending}
-        />
+      {/* Input area */}
+      <div className={`${results.length > 0 || generate.isPending ? "mb-8" : "mb-6"}`}>
+        <div className="rounded-2xl border border-amber-200/70 bg-white/90 p-3 shadow-sm shadow-amber-100/50 transition-shadow focus-within:shadow-md focus-within:shadow-amber-200/40 focus-within:border-amber-300">
+          {/* Ingredient chips inside the input box */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {ingredients.map((ingredient, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-100/80 px-2.5 py-1 font-sans text-sm font-medium text-amber-900 border border-amber-200/60"
+              >
+                {ingredient}
+                <button
+                  onClick={() => removeIngredient(index)}
+                  disabled={generate.isPending}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-amber-200/60 text-amber-600"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={ingredients.length === 0 ? "chicken, rice, garlic..." : "add more..."}
+              disabled={generate.isPending}
+              className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1.5 font-sans text-base text-stone-800 placeholder-stone-400 focus:outline-none disabled:opacity-50"
+            />
+          </div>
 
-        <button
-          onClick={handleGenerate}
-          disabled={ingredients.length === 0 || generate.isPending}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-6 py-3.5 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
-        >
-          <Search className="h-5 w-5" />
-          {generate.isPending ? "Creating recipes..." : "Find Recipes"}
-        </button>
+          {/* Action row */}
+          <div className="mt-2 flex items-center justify-between border-t border-amber-100/60 pt-2">
+            <span className="font-sans text-xs text-stone-400">
+              {ingredients.length === 0
+                ? "Press Enter after each ingredient"
+                : `${ingredients.length} ingredient${ingredients.length !== 1 ? "s" : ""}`}
+            </span>
+            <button
+              onClick={handleGenerate}
+              disabled={ingredients.length === 0 || generate.isPending}
+              className="flex items-center gap-1.5 rounded-full bg-amber-700 px-5 py-1.5 font-sans text-sm font-semibold text-amber-50 transition-all hover:bg-amber-800 disabled:opacity-40"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {generate.isPending ? "Cooking up ideas..." : "Find recipes"}
+            </button>
+          </div>
+        </div>
 
-        {topIngredients && topIngredients.length > 0 && (
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-medium text-gray-400">
-              Your frequent ingredients:
+        {/* Quick-add suggestions */}
+        {topIngredients && topIngredients.length > 0 && results.length === 0 && !generate.isPending && (
+          <div className="mt-5 text-center">
+            <p className="mb-2 font-sans text-xs font-medium uppercase tracking-wider text-amber-600/50">
+              Your favorites
             </p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap justify-center gap-1.5">
               {topIngredients.map((item) => (
                 <button
                   key={item.ingredient}
-                  onClick={() => addQuickIngredient(item.ingredient)}
-                  className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600 transition-colors hover:border-primary-300 hover:bg-primary-50"
+                  onClick={() => addIngredient(item.ingredient)}
+                  disabled={ingredients.includes(item.ingredient)}
+                  className="rounded-full border border-amber-200/50 bg-white/80 px-3 py-1 font-sans text-xs text-amber-800/70 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-30"
                 >
                   {item.ingredient}
                 </button>
@@ -106,21 +163,27 @@ export default function HomePage() {
         )}
       </div>
 
+      {/* Loading state */}
       {generate.isPending && (
-        <LoadingSpinner message="Claude is crafting recipes from your ingredients..." />
+        <LoadingSpinner message="Finding recipes for you..." />
       )}
 
+      {/* Error state */}
       {generate.isError && (
-        <div className="mx-auto mt-6 max-w-2xl rounded-lg bg-red-50 p-4 text-center text-red-700">
+        <div className="rounded-xl bg-red-50 p-4 text-center font-sans text-sm text-red-700">
           Failed to generate recipes. Please check your API key and try again.
         </div>
       )}
 
-      {results.length > 0 && (
-        <div className="mt-8">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
-            Recipes for you
-          </h2>
+      {/* Results */}
+      {results.length > 0 && !generate.isPending && (
+        <div>
+          <div className="mb-4 flex items-center gap-2">
+            <ArrowRight className="h-4 w-4 text-amber-500" />
+            <h2 className="font-sans text-lg font-semibold text-amber-900">
+              Here's what you can make
+            </h2>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((recipe) => (
               <RecipeCard
