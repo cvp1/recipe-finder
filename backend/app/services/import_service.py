@@ -13,6 +13,8 @@ from app.config import settings
 from app.models import Recipe
 from app.services.claude_service import _extract_json, normalize_recipe
 
+from app.config import settings
+
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,35 @@ def _parse_recipe_with_claude(text: str, source: str) -> list[dict]:
     except (json.JSONDecodeError, IndexError, anthropic.APIError) as e:
         logger.error("Claude API error during recipe import: %s", e)
         raise
+
+
+def search_recipe_image(recipe_name: str, recipe_id: str) -> str | None:
+    """Search Pexels for a food photo matching the recipe name and download it.
+    Returns the local URL path or None if unavailable."""
+    if not settings.pexels_api_key:
+        return None
+
+    try:
+        resp = httpx.get(
+            "https://api.pexels.com/v1/search",
+            params={"query": f"{recipe_name} food", "per_page": 1, "orientation": "landscape"},
+            headers={"Authorization": settings.pexels_api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        photos = resp.json().get("photos", [])
+        if not photos:
+            return None
+
+        # Use the medium-sized image (good balance of quality/size)
+        image_url = photos[0].get("src", {}).get("medium")
+        if not image_url:
+            return None
+
+        return _download_image(image_url, recipe_id)
+    except Exception as e:
+        logger.warning("Pexels image search failed for '%s': %s", recipe_name, e)
+        return None
 
 
 def _find_recipe_image_url(soup: BeautifulSoup, base_url: str) -> str | None:

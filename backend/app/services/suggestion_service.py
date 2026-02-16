@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import DailySuggestion, Recipe
 from app.services.claude_service import generate_daily_suggestions, normalize_recipe
+from app.services.import_service import search_recipe_image
 from app.services.learning_service import get_user_preferences
 
 
@@ -62,6 +63,11 @@ def get_or_create_daily_suggestions(db: Session, force_refresh: bool = False) ->
         )
         db.add(recipe)
         db.flush()
+
+        image_path = search_recipe_image(recipe.name, recipe.id)
+        if image_path:
+            recipe.image_url = image_path
+
         recipes.append(recipe)
         recipe_ids.append(recipe.id)
 

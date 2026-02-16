@@ -1,13 +1,18 @@
+import base64
 import gzip
 import hashlib
 import io
 import json
+import uuid
 import zipfile
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from app.models import Recipe, SavedRecipe
+
+UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
 
 
 def _recipe_hash(data: dict) -> str:
@@ -75,6 +80,20 @@ def import_paprika(db: Session, file_bytes: bytes) -> dict:
             db.add(recipe)
             db.flush()
 
+            # Extract embedded photo data and save as file
+            # photo_data contains base64-encoded image; photo is just a filename
+            photo_data = data.get("photo_data")
+            if photo_data and isinstance(photo_data, str):
+                try:
+                    img_bytes = base64.b64decode(photo_data)
+                    if len(img_bytes) > 0:
+                        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+                        filename = f"{recipe.id}_{uuid.uuid4().hex[:8]}.jpg"
+                        (UPLOADS_DIR / filename).write_bytes(img_bytes)
+                        recipe.image_url = f"/api/uploads/{filename}"
+                except Exception:
+                    pass  # Skip bad image data silently
+
             # Create SavedRecipe if rated or favorited
             rating = data.get("rating")
             on_favorites = data.get("on_favorites", False)
@@ -108,6 +127,24 @@ def export_paprika(db: Session, recipes: list[Recipe]) -> bytes:
                 except json.JSONDecodeError:
                     categories = [recipe.categories]
 
+            # Read and encode image if available
+            photo_filename = ""
+            photo_data_b64 = None
+            photo_hash_val = ""
+            if recipe.image_url:
+                img_path = UPLOADS_DIR / Path(recipe.image_url).name
+                if img_path.is_file():
+                    img_bytes = img_path.read_bytes()
+                    photo_data_b64 = base64.b64encode(img_bytes).decode("ascii")
+                    photo_hash_val = hashlib.sha256(img_bytes).hexdigest()
+                    photo_filename = f"{recipe.id}.jpg"
+
+            created_str = ""
+            if recipe.created_at:
+                created_str = recipe.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                created_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
             paprika_data = {
                 "uid": recipe.id,
                 "name": recipe.name or "",
@@ -129,17 +166,18 @@ def export_paprika(db: Session, recipes: list[Recipe]) -> bytes:
                 "on_favorites": saved is not None,
                 "in_trash": False,
                 "is_pinned": False,
-                "scale": None,
-                "photo": "",
-                "photo_hash": "",
-                "photo_data": None,
-                "photo_large": None,
-                "photo_url": None,
-                "created": recipe.created_at.isoformat() if recipe.created_at else datetime.utcnow().isoformat(),
+                "scale": "",
+                "photo": photo_filename,
+                "photo_hash": photo_hash_val,
+                "photo_data": photo_data_b64,
+                "photo_large": "",
+                "photo_url": "",
+                "created": created_str,
                 "hash": "",
             }
-            # Generate hash after building data
-            paprika_data["hash"] = _recipe_hash(paprika_data)
+            # Generate hash after building data (exclude photo_data to keep hash stable)
+            hash_data = {k: v for k, v in paprika_data.items() if k != "photo_data"}
+            paprika_data["hash"] = _recipe_hash(hash_data)
 
             json_bytes = json.dumps(paprika_data, ensure_ascii=False).encode("utf-8")
             gzipped = gzip.compress(json_bytes)

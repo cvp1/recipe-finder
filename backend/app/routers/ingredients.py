@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models import Recipe, SavedRecipe
 from app.schemas import GenerateRequest, GenerateResponse, RecipeOut
 from app.services.claude_service import generate_recipes, normalize_recipe
+from app.services.import_service import search_recipe_image
 from app.services.learning_service import get_user_preferences, track_search
 
 router = APIRouter(tags=["ingredients"])
@@ -49,6 +50,11 @@ def generate_recipes_endpoint(request: GenerateRequest, db: Session = Depends(ge
         )
         db.add(recipe)
         db.flush()
+
+        image_path = search_recipe_image(recipe.name, recipe.id)
+        if image_path:
+            recipe.image_url = image_path
+
         saved_recipes.append(recipe)
 
     db.commit()
