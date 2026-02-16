@@ -64,7 +64,7 @@ def get_or_create_daily_suggestions(db: Session, force_refresh: bool = False) ->
         db.add(recipe)
         db.flush()
 
-        image_path = search_recipe_image(recipe.name, recipe.id)
+        image_path, _ = search_recipe_image(recipe.name, recipe.id)
         if image_path:
             recipe.image_url = image_path
 

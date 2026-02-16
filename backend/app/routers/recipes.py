@@ -218,19 +218,34 @@ def delete_recipe_image(recipe_id: str, db: Session = Depends(get_db)):
 @router.post("/recipes/backfill-images")
 def backfill_images(db: Session = Depends(get_db)):
     """Find all recipes without images and try to fetch from Pexels."""
+    from app.config import settings as cfg
+    import logging
+    log = logging.getLogger(__name__)
+
+    has_key = bool(cfg.pexels_api_key)
+    log.info("Backfill images: pexels_api_key set=%s", has_key)
+
     recipes = (
         db.query(Recipe)
         .filter((Recipe.image_url.is_(None)) | (Recipe.image_url == ""))
         .all()
     )
     updated = 0
+    errors = []
     for recipe in recipes:
-        image_path = search_recipe_image(recipe.name, recipe.id)
+        image_path, error = search_recipe_image(recipe.name, recipe.id)
         if image_path:
             recipe.image_url = image_path
             updated += 1
+        elif error:
+            errors.append(f"{recipe.name}: {error}")
     db.commit()
-    return {"total": len(recipes), "updated": updated}
+    return {
+        "total": len(recipes),
+        "updated": updated,
+        "pexels_key_set": has_key,
+        "errors": errors[:5],
+    }
 
 
 @router.get("/stats/top-ingredients", response_model=list[TopIngredientOut])

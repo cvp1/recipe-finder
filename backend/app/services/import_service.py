@@ -77,11 +77,11 @@ def _parse_recipe_with_claude(text: str, source: str) -> list[dict]:
         raise
 
 
-def search_recipe_image(recipe_name: str, recipe_id: str) -> str | None:
+def search_recipe_image(recipe_name: str, recipe_id: str) -> tuple[str | None, str | None]:
     """Search Pexels for a food photo matching the recipe name and download it.
-    Returns the local URL path or None if unavailable."""
+    Returns (local_url_path, error_string). One of the two will be None."""
     if not settings.pexels_api_key:
-        return None
+        return None, "no_api_key"
 
     try:
         resp = httpx.get(
@@ -93,17 +93,23 @@ def search_recipe_image(recipe_name: str, recipe_id: str) -> str | None:
         resp.raise_for_status()
         photos = resp.json().get("photos", [])
         if not photos:
-            return None
+            return None, "no_photos_returned"
 
         # Use the medium-sized image (good balance of quality/size)
         image_url = photos[0].get("src", {}).get("medium")
         if not image_url:
-            return None
+            return None, "no_medium_src"
 
-        return _download_image(image_url, recipe_id)
+        path = _download_image(image_url, recipe_id)
+        if not path:
+            return None, "download_failed"
+        return path, None
+    except httpx.HTTPStatusError as e:
+        logger.warning("Pexels API error for '%s': %s %s", recipe_name, e.response.status_code, e.response.text[:200])
+        return None, f"pexels_http_{e.response.status_code}"
     except Exception as e:
         logger.warning("Pexels image search failed for '%s': %s", recipe_name, e)
-        return None
+        return None, f"{type(e).__name__}: {e}"
 
 
 def _find_recipe_image_url(soup: BeautifulSoup, base_url: str) -> str | None:
@@ -221,7 +227,7 @@ def _save_parsed_recipes(db: Session, recipes: list[dict], source: str, image_ur
 
         # Fall back to Pexels if no image was set
         if not recipe.image_url:
-            pexels_path = search_recipe_image(name, recipe.id)
+            pexels_path, _ = search_recipe_image(name, recipe.id)
             if pexels_path:
                 recipe.image_url = pexels_path
 

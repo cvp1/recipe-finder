@@ -148,8 +148,8 @@ export async function importFromFiles(files: File[]): Promise<ImportResult> {
   return res.data;
 }
 
-export async function backfillImages(): Promise<{ total: number; updated: number }> {
-  const res = await api.post<{ total: number; updated: number }>("/recipes/backfill-images");
+export async function backfillImages(): Promise<{ total: number; updated: number; pexels_key_set: boolean; errors: string[] }> {
+  const res = await api.post<{ total: number; updated: number; pexels_key_set: boolean; errors: string[] }>("/recipes/backfill-images");
   return res.data;
 }
 

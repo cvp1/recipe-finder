@@ -75,9 +75,16 @@ export default function AllRecipesPage() {
         queryClient.invalidateQueries({ queryKey: ["allRecipes"] });
         setBackfillMsg(`Found images for ${result.updated} of ${result.total} recipes`);
       } else {
-        setBackfillMsg(result.total === 0 ? "All recipes already have images" : "No images found — check your Pexels API key");
+        const detail = result.errors?.[0] ?? "";
+        setBackfillMsg(
+          result.total === 0
+            ? "All recipes already have images"
+            : !result.pexels_key_set
+              ? "PEXELS_API_KEY is not set on the server"
+              : `Failed (${result.total} recipes): ${detail}`
+        );
       }
-      setTimeout(() => setBackfillMsg(null), 5000);
+      setTimeout(() => setBackfillMsg(null), 8000);
     },
   });
 

@@ -51,7 +51,7 @@ def generate_recipes_endpoint(request: GenerateRequest, db: Session = Depends(ge
         db.add(recipe)
         db.flush()
 
-        image_path = search_recipe_image(recipe.name, recipe.id)
+        image_path, _ = search_recipe_image(recipe.name, recipe.id)
         if image_path:
             recipe.image_url = image_path
 
